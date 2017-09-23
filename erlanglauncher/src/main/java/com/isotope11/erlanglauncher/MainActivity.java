@@ -86,7 +86,7 @@ public class MainActivity extends Activity {
       this.mHello = (TextView) rootView.findViewById(R.id.helloWorld);
 
       this.listFiles();
-      //this.copyErlangIntoDataDir(); // Need to make this optional, check if it's there, or something...
+      this.copyErlangIntoDataDir(); // Need to make this optional, check if it's there, or something...
       this.makeExecutable("erlang/bin/epmd");
       this.makeExecutable("erlang/bin/erl");
       this.listFiles();
@@ -246,8 +246,10 @@ class Decompress {
           dirChecker(ze.getName());
         } else {
           FileOutputStream fout = new FileOutputStream(loc + ze.getName());
-          for (int c = zin.read(); c != -1; c = zin.read()) {
-            fout.write(c);
+          int read;
+          byte[] buffer = new byte[8192];
+          while ((read = zin.read(buffer)) > 0) {
+	      fout.write(buffer, 0, read);
           }
 
           zin.closeEntry();

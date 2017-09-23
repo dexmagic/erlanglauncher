@@ -1,5 +1,9 @@
+# files created when using Gradle
+.idea
+*.iml
 .gradle
+# this build directory is created when compiling the project with Gradle
+build
 /local.properties
-/.idea/workspace.xml
 .DS_Store
 hello_jinterface.beam

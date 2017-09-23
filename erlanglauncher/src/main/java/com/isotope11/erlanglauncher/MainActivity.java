@@ -156,7 +156,7 @@ public class MainActivity extends Activity {
 
       InputStream erlangZipFileInputStream = null;
       try {
-        erlangZipFileInputStream = getActivity().getApplicationContext().getAssets().open("erlang_R16B.zip");
+        erlangZipFileInputStream = getActivity().getApplicationContext().getAssets().open("erlang_20.0.4.zip");
       } catch (IOException e) {
         e.printStackTrace();
       }

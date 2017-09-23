@@ -118,7 +118,7 @@ public class MainActivity extends Activity {
     }
 
     public void listProcesses() {
-      this.doCommand("/system/bin/ps ax");
+      this.doCommand("/system/bin/ps");
     }
 
     public void doCommand(String command) {

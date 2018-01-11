@@ -114,7 +114,8 @@ public class MainActivity extends Activity {
     }
 
     public void launchErlangNode() {
-      this.doCommand("/data/data/com.isotope11.erlanglauncher/files/erlang/bin/erl -name foo@192.168.2.10 -setcookie test");
+      // Enter below the IP address of this Android device on your local network
+      this.doCommand("/data/data/com.isotope11.erlanglauncher/files/erlang/bin/erl -name foo@192.168.1.XX -setcookie test");
     }
 
     public void listProcesses() {
@@ -175,7 +176,8 @@ public class MainActivity extends Activity {
     }
 
     public void testJInterface(){
-      String server = "server@192.168.2.20";
+      // IP address of the remote Erlang node on the local network
+      String server = "server@192.168.1.YY";
 
       OtpNode self = null;
       OtpMbox mbox = null;

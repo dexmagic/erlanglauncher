@@ -87,8 +87,12 @@ public class MainActivity extends Activity {
 
       this.listFiles();
       this.copyErlangIntoDataDir(); // Need to make this optional, check if it's there, or something...
-      this.makeExecutable("erlang/bin/epmd");
       this.makeExecutable("erlang/bin/erl");
+      this.makeExecutable("erlang/erts-9.0.4/bin/erlexec");
+      this.makeExecutable("erlang/erts-9.0.4/bin/beam.smp");
+      this.makeExecutable("erlang/erts-9.0.4/bin/erl_child_setup");
+      this.makeExecutable("erlang/erts-9.0.4/bin/epmd");
+      this.makeExecutable("erlang/erts-9.0.4/bin/inet_gethost");
       this.listFiles();
       this.copyErlangServerCode();
       this.launchErlangNode(); // This command is also launching the Epmd daemon
@@ -113,7 +117,7 @@ public class MainActivity extends Activity {
     }
 
     public void listFiles() {
-      this.doCommand("/system/bin/ls -al /data/data/com.isotope11.erlanglauncher/files/erlang/bin");
+      this.doCommand("/system/bin/ls -al /data/data/com.isotope11.erlanglauncher/files/erlang/erts-9.0.4/bin");
     }
 
     public void launchErlangNode() {
@@ -125,6 +129,7 @@ public class MainActivity extends Activity {
 
       // Launch the Erlang server node locally.
       this.doCommand("files/erlang/bin/erl -detached -name server@127.0.0.1 " +
+                     // Remove the -detached option to get the error messages in the log, if any
                      "-setcookie cookie " + // the "cookie" shared among all nodes
                      "-pa files/ " + // <= the directory where the hello_jinterface.beam is found
                      "-s hello_jinterface",

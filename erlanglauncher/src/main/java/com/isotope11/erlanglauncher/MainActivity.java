@@ -90,8 +90,15 @@ public class MainActivity extends Activity {
       this.makeExecutable("erlang/bin/epmd");
       this.makeExecutable("erlang/bin/erl");
       this.listFiles();
-      this.launchEpmd();
-      this.launchErlangNode();
+      this.copyErlangServerCode();
+      this.launchErlangNode(); // This command is also launching the Epmd daemon
+      try {
+        // Wait 2 seconds for the server node to finish launching.
+        // TODO: code should be improved to avoid this random wait time
+        Thread.sleep(2000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
       this.listProcesses();
       JInterfaceTester task = new JInterfaceTester();
       task.execute();
@@ -109,13 +116,22 @@ public class MainActivity extends Activity {
       this.doCommand("/system/bin/ls -al /data/data/com.isotope11.erlanglauncher/files/erlang/bin");
     }
 
-    public void launchEpmd() {
-      this.doCommand("/data/data/com.isotope11.erlanglauncher/files/erlang/bin/epmd -daemon");
-    }
-
     public void launchErlangNode() {
-      // Enter below the IP address of this Android device on your local network
-      this.doCommand("/data/data/com.isotope11.erlanglauncher/files/erlang/bin/erl -name foo@192.168.1.XX -setcookie test");
+      // The HOME environment variable must be set for the Erlang server node to launch,
+      // otherwise the launch fails with the following message:
+      //    "error:: erlexec: HOME must be set"
+      // There is a bug on this topic here: https://bugs.erlang.org/browse/ERL-476
+      String[] envp = { "HOME=/data/data/com.isotope11.erlanglauncher" };
+
+      // Launch the Erlang server node locally.
+      this.doCommand("files/erlang/bin/erl -detached -name server@127.0.0.1 " +
+                     "-setcookie cookie " + // the "cookie" shared among all nodes
+                     "-pa files/ " + // <= the directory where the hello_jinterface.beam is found
+                     "-s hello_jinterface",
+                     envp,
+                     // The working directory used when launching the command
+                     new File("/data/data/com.isotope11.erlanglauncher/"),
+                     false); // Don't wait for the command to finish)
     }
 
     public void listProcesses() {
@@ -174,7 +190,7 @@ public class MainActivity extends Activity {
 
       InputStream erlangZipFileInputStream = null;
       try {
-        erlangZipFileInputStream = getActivity().getApplicationContext().getAssets().open("erlang_20.0.4.zip");
+        erlangZipFileInputStream = context.getAssets().open("erlang_20.0.4.zip");
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -182,6 +198,26 @@ public class MainActivity extends Activity {
       unzipper.unzip();
 
       Log.d("Fragment", "copyErlangIntoDataDir done");
+    }
+
+    protected void copyErlangServerCode() {
+      InputStream erlangServerCodeInputStream = null;
+      FileOutputStream out = null;
+      try {
+        erlangServerCodeInputStream = context.getAssets().open("hello_jinterface.beam");
+
+        out = context.openFileOutput("hello_jinterface.beam", MODE_PRIVATE);
+        int read;
+        byte[] buffer = new byte[8192];
+        while ((read = erlangServerCodeInputStream.read(buffer)) > 0) {
+            out.write(buffer, 0, read);
+        }
+        erlangServerCodeInputStream.close();
+        out.flush();
+        out.close();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 
@@ -193,13 +229,14 @@ public class MainActivity extends Activity {
     }
 
     public void testJInterface(){
-      // IP address of the remote Erlang node on the local network
-      String server = "server@192.168.1.YY";
+      // Name of the Erlang server node running locally, launched from within this same app
+      String server = "server@127.0.0.1";
 
       OtpNode self = null;
       OtpMbox mbox = null;
       try {
-        self = new OtpNode("mynode", "test");
+        self = new OtpNode("mynode",  // or "mynode@127.0.0.1", both work
+                           "cookie"); // the "cookie" shared among all nodes
         mbox = self.createMbox("facserver");
 
         if (self.ping(server, 2000)) {

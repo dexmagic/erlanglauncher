@@ -6,4 +6,4 @@
 build
 /local.properties
 .DS_Store
-hello_jinterface.beam
+./hello_jinterface.beam

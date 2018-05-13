@@ -123,9 +123,13 @@ public class MainActivity extends Activity {
     }
 
     public void doCommand(String command) {
+        this.doCommand(command, null, null, true);
+    }
+
+    public void doCommand(String command, String[] envp, File dir, boolean wait) {
       try {
         // Executes the command.
-        Process process = Runtime.getRuntime().exec(command);
+        Process process = Runtime.getRuntime().exec(command, envp, dir);
 
         // Reads stdout.
         // NOTE: You can write to stdin of the command using
@@ -140,11 +144,24 @@ public class MainActivity extends Activity {
         }
         reader.close();
 
-        // Waits for the command to finish.
-        process.waitFor();
+        if (wait) {
+          // Waits for the command to finish.
+          process.waitFor();
+        }
 
-        // send output to the log
+        // Reads stderr.
+        reader = new BufferedReader(
+                new InputStreamReader(process.getErrorStream()));
+        StringBuffer error = new StringBuffer();
+        while ((read = reader.read(buffer)) > 0) {
+          error.append(buffer, 0, read);
+        }
+        reader.close();
+
+        // Send stdout and stderr to the log
         Log.d("Fragment", output.toString());
+        Log.d("Fragment error:", error.toString());
+
       } catch (IOException e) {
         throw new RuntimeException(e);
       } catch (InterruptedException e) {

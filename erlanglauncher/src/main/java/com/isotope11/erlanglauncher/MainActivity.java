@@ -88,11 +88,11 @@ public class MainActivity extends Activity {
       this.listFiles();
       this.copyErlangIntoDataDir(); // Need to make this optional, check if it's there, or something...
       this.makeExecutable("erlang/bin/erl");
-      this.makeExecutable("erlang/erts-9.0.4/bin/erlexec");
-      this.makeExecutable("erlang/erts-9.0.4/bin/beam.smp");
-      this.makeExecutable("erlang/erts-9.0.4/bin/erl_child_setup");
-      this.makeExecutable("erlang/erts-9.0.4/bin/epmd");
-      this.makeExecutable("erlang/erts-9.0.4/bin/inet_gethost");
+      this.makeExecutable("erlang/erts-11.0.2/bin/erlexec");
+      this.makeExecutable("erlang/erts-11.0.2/bin/beam.smp");
+      this.makeExecutable("erlang/erts-11.0.2/bin/erl_child_setup");
+      this.makeExecutable("erlang/erts-11.0.2/bin/epmd");
+      this.makeExecutable("erlang/erts-11.0.2/bin/inet_gethost");
       this.listFiles();
       this.copyErlangServerCode();
       this.launchErlangNode(); // This command is also launching the Epmd daemon
@@ -117,7 +117,7 @@ public class MainActivity extends Activity {
     }
 
     public void listFiles() {
-      this.doCommand("/system/bin/ls -al /data/data/com.isotope11.erlanglauncher/files/erlang/erts-9.0.4/bin");
+      this.doCommand("/system/bin/ls -al /data/data/com.isotope11.erlanglauncher/files/erlang/erts-11.0.2/bin");
     }
 
     public void launchErlangNode() {
@@ -195,7 +195,7 @@ public class MainActivity extends Activity {
 
       InputStream erlangZipFileInputStream = null;
       try {
-        erlangZipFileInputStream = context.getAssets().open("erlang_20.0.4.zip");
+        erlangZipFileInputStream = context.getAssets().open("erlang_23.0.2_androideabi16_arm.zip");
       } catch (IOException e) {
         e.printStackTrace();
       }

@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -195,7 +196,16 @@ public class MainActivity extends Activity {
 
       InputStream erlangZipFileInputStream = null;
       try {
-        erlangZipFileInputStream = context.getAssets().open("erlang_23.0.2_androideabi16_arm.zip");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP &&
+            Build.SUPPORTED_ABIS[0].equals("arm64-v8a")) {
+          // Use the 64-bit version of the Erlang runtime on compatible 64-bit ARM-based devices
+          Log.d("Fragment", "64-bit version");
+          erlangZipFileInputStream = context.getAssets().open("erlang_23.0.2_android21_arm64.zip");
+        } else {
+          // Use the 32-bit version of the Erlang runtime otherwise
+          Log.d("Fragment", "32-bit version");
+          erlangZipFileInputStream = context.getAssets().open("erlang_23.0.2_androideabi16_arm.zip");
+        }
       } catch (IOException e) {
         e.printStackTrace();
       }

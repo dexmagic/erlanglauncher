@@ -1,12 +1,12 @@
-apply plugin: 'android'
+apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 21
-    buildToolsVersion "27.0.3"
+    compileSdkVersion 30
+    buildToolsVersion "30.0.1"
 
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 19
+        targetSdkVersion 28
         versionCode 1
         versionName "1.0"
     }
@@ -19,5 +19,8 @@ android {
 }
 
 dependencies {
-    compile files('libs/OtpErlang.jar')
+    implementation files('libs/OtpErlang.jar')
+
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation "androidx.fragment:fragment:1.2.5"
 }

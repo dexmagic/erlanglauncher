@@ -1,7 +1,5 @@
 package com.isotope11.erlanglauncher;
 
-import android.app.Activity;
-import android.app.Fragment;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -13,6 +11,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
 
 import com.ericsson.otp.erlang.OtpErlangAtom;
 import com.ericsson.otp.erlang.OtpErlangDecodeException;
@@ -32,7 +33,7 @@ import java.io.InputStreamReader;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
 
   private static Context context;
 
@@ -44,7 +45,7 @@ public class MainActivity extends Activity {
     setContentView(R.layout.activity_main);
 
     if (savedInstanceState == null) {
-      getFragmentManager().beginTransaction()
+      getSupportFragmentManager().beginTransaction()
               .add(R.id.container, new PlaceholderFragment())
               .commit();
     }
@@ -73,7 +74,7 @@ public class MainActivity extends Activity {
   /**
    * A placeholder fragment containing a simple view.
    */
-  public class PlaceholderFragment extends Fragment {
+  public static class PlaceholderFragment extends Fragment {
     TextView mHello;
 
     public PlaceholderFragment() {
@@ -236,7 +237,7 @@ public class MainActivity extends Activity {
     }
   }
 
-  public class JInterfaceTester extends AsyncTask<Object, Void, String>{
+  public static class JInterfaceTester extends AsyncTask<Object, Void, String>{
     @Override
     protected String doInBackground(Object... arg0) {
       testJInterface();

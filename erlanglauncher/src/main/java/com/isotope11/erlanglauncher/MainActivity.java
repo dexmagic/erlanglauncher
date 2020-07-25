@@ -95,6 +95,8 @@ public class MainActivity extends AppCompatActivity {
       this.makeExecutable("erlang/erts-11.0.2/bin/erl_child_setup");
       this.makeExecutable("erlang/erts-11.0.2/bin/epmd");
       this.makeExecutable("erlang/erts-11.0.2/bin/inet_gethost");
+      // + other executables in erts-X.Y.Z/bin potentially such as erl, erlc...
+
       this.listFiles();
       this.copyErlangServerCode();
       this.launchErlangNode(); // This command is also launching the Epmd daemon
@@ -131,6 +133,7 @@ public class MainActivity extends AppCompatActivity {
 
       // Launch the Erlang server node locally.
       this.doCommand("files/erlang/bin/erl -detached -name server@127.0.0.1 " +
+                     // "-sname server@localhost" could be used instead, or even "-sname server"
                      // Remove the -detached option to get the error messages in the log, if any
                      "-setcookie cookie " + // the "cookie" shared among all nodes
                      "-pa files/ " + // <= the directory where the hello_jinterface.beam is found
@@ -159,6 +162,7 @@ public class MainActivity extends AppCompatActivity {
         //       process.getOutputStream().
         BufferedReader reader = new BufferedReader(
                 new InputStreamReader(process.getInputStream()));
+
         int read;
         char[] buffer = new char[4096];
         StringBuffer output = new StringBuffer();
@@ -175,6 +179,7 @@ public class MainActivity extends AppCompatActivity {
         // Reads stderr.
         reader = new BufferedReader(
                 new InputStreamReader(process.getErrorStream()));
+
         StringBuffer error = new StringBuffer();
         while ((read = reader.read(buffer)) > 0) {
           error.append(buffer, 0, read);
@@ -246,12 +251,12 @@ public class MainActivity extends AppCompatActivity {
 
     public void testJInterface(){
       // Name of the Erlang server node running locally, launched from within this same app
-      String server = "server@127.0.0.1";
+      String server = "server@127.0.0.1"; // or "server@localhost"
 
       OtpNode self = null;
       OtpMbox mbox = null;
       try {
-        self = new OtpNode("mynode",  // or "mynode@127.0.0.1", both work
+        self = new OtpNode("mynode",  // or "mynode@127.0.0.1" or "mynode@localhost", all work
                            "cookie"); // the "cookie" shared among all nodes
         mbox = self.createMbox("facserver");
 

@@ -1,10 +1,12 @@
 package com.isotope11.erlanglauncher;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.system.Os;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -27,11 +29,10 @@ import com.ericsson.otp.erlang.OtpNode;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -87,8 +88,8 @@ public class MainActivity extends AppCompatActivity {
 
       this.mHello = (TextView) rootView.findViewById(R.id.helloWorld);
 
+      this.createErlangRuntimeIntoDataDir(); // Need to make this optional, check if it's there, or something...
       this.listFiles();
-      this.copyErlangIntoDataDir(); // Need to make this optional, check if it's there, or something...
       this.makeExecutable("erlang/bin/erl");
       this.makeExecutable("erlang/erts-11.0.2/bin/erlexec");
       this.makeExecutable("erlang/erts-11.0.2/bin/beam.smp");
@@ -197,33 +198,54 @@ public class MainActivity extends AppCompatActivity {
       }
     }
 
-    protected void copyErlangIntoDataDir() {
-      Log.d("Fragment", "copyErlangIntoDataDir start");
+    protected void createErlangRuntimeIntoDataDir() {
+      Log.d("Fragment", "createErlangRuntimeIntoDataDir start");
 
-      InputStream erlangZipFileInputStream = null;
-      try {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP &&
-            Build.SUPPORTED_ABIS[0].equals("arm64-v8a")) {
-          // Use the 64-bit version of the Erlang runtime on compatible 64-bit ARM-based devices
-          Log.d("Fragment", "64-bit version");
-          erlangZipFileInputStream = context.getAssets().open("erlang_23.0.2_android21_arm64.zip");
-        } else {
-          // Use the 32-bit version of the Erlang runtime otherwise
-          Log.d("Fragment", "32-bit version");
-          erlangZipFileInputStream = context.getAssets().open("erlang_23.0.2_androideabi16_arm.zip");
-        }
-      } catch (IOException e) {
-        e.printStackTrace();
+      ApplicationInfo info = context.getApplicationInfo();
+
+      File filesMappingFile = new File(info.nativeLibraryDir, "libmappings.so");
+      if (!filesMappingFile.exists()) {
+        Log.e("Fragment", "No file mapping at " +
+              filesMappingFile.getAbsolutePath());
+        return;
       }
-      Decompress unzipper = new Decompress(erlangZipFileInputStream, "/data/data/com.isotope11.erlanglauncher/files/");
-      unzipper.unzip();
 
-      Log.d("Fragment", "copyErlangIntoDataDir done");
+      Log.d("Fragment", "Create the Erlang Runtime file structure");
+      try {
+        BufferedReader reader =
+          new BufferedReader(new FileReader(filesMappingFile));
+        String line;
+        while ((line = reader.readLine()) != null) {
+          String[] parts = line.split("←");
+          if (parts.length != 2) {
+            Log.e("Fragment", "Malformed line " + line + " in " +
+                  filesMappingFile.getAbsolutePath());
+            continue;
+          }
+
+          String oldPath = info.nativeLibraryDir + "/" + parts[0];
+          String newPath = "/data/data/com.isotope11.erlanglauncher/files/" +
+                           parts[1];
+
+          File directory = new File(newPath).getParentFile();
+          if (!directory.isDirectory() && !directory.mkdirs()) {
+            throw new RuntimeException("Unable to create directory: " + directory.getAbsolutePath());
+          }
+
+          Log.d("Fragment", "About to setup link: " + oldPath + " ← " + newPath);
+          new File(newPath).delete();
+          createSymLink(oldPath, newPath);
+        }
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+
+      Log.d("Fragment", "createErlangRuntimeIntoDataDir done");
     }
 
     protected void copyErlangServerCode() {
-      InputStream erlangServerCodeInputStream = null;
-      FileOutputStream out = null;
+      InputStream erlangServerCodeInputStream;
+      FileOutputStream out;
       try {
         erlangServerCodeInputStream = context.getAssets().open("hello_jinterface.beam");
 
@@ -239,6 +261,24 @@ public class MainActivity extends AppCompatActivity {
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
+    }
+  }
+
+  // Support the creation of symlinks before Android 5.0 Lollipop
+  static void createSymLink(String originalFilePath, String newPath) {
+    try {
+      if (Build.VERSION.SDK_INT >= 21) { // VERSION_CODES.LOLLIPOP
+        Os.symlink(originalFilePath, newPath);
+        return;
+      }
+      final Class<?> libcore = Class.forName("libcore.io.Libcore");
+      final java.lang.reflect.Field fOs = libcore.getDeclaredField("os");
+      fOs.setAccessible(true);
+      final Object os = fOs.get(null);
+      final java.lang.reflect.Method method = os.getClass().getMethod("symlink", String.class, String.class);
+      method.invoke(os, originalFilePath, newPath);
+    } catch (Exception e) {
+      e.printStackTrace();
     }
   }
 
@@ -298,54 +338,5 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-  }
-}
-
-class Decompress {
-  private InputStream zip;
-  private String loc;
-
-  public Decompress(InputStream zipFileInputStream, String location) {
-    zip = zipFileInputStream;
-    loc = location;
-
-    dirChecker("");
-  }
-
-  public void unzip() {
-    try {
-      ZipInputStream zin = new ZipInputStream(zip);
-      ZipEntry ze = null;
-      while ((ze = zin.getNextEntry()) != null) {
-        Log.d("Fragment", "Unzipping " + ze.getName());
-
-        if (ze.isDirectory()) {
-          dirChecker(ze.getName());
-        } else {
-          FileOutputStream fout = new FileOutputStream(loc + ze.getName());
-          int read;
-          byte[] buffer = new byte[8192];
-          while ((read = zin.read(buffer)) > 0) {
-	      fout.write(buffer, 0, read);
-          }
-
-          zin.closeEntry();
-          fout.close();
-        }
-
-      }
-      zin.close();
-    } catch (Exception e) {
-      Log.e("Fragment", "unzip", e);
-    }
-
-  }
-
-  private void dirChecker(String dir) {
-    File f = new File(loc + dir);
-
-    if (!f.isDirectory()) {
-      f.mkdirs();
-    }
   }
 }

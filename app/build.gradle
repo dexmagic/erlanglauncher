@@ -1,4 +1,9 @@
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+
+
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
 
 android {
     compileSdkVersion 30
@@ -6,7 +11,7 @@ android {
 
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 28
+        targetSdkVersion 30
         versionCode 1
         versionName "1.0"
     }
@@ -23,4 +28,92 @@ dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation "androidx.fragment:fragment:1.2.5"
+
+    // Kotlin
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+}
+
+// Deferred execution after the project has been evaluated
+afterEvaluate {
+    android.applicationVariants.all { variant ->
+        variant.javaCompileProvider.get().dependsOn(setup)
+    }
+}
+
+// Setup for the supported native architecture & ABIs
+task setup() {
+    doLast {
+        def version = 1
+        setFilesInjniLibs("aarch64", "erlang_23.0.2_android21_arm64.zip", version)
+        setFilesInjniLibs("arm",     "erlang_23.0.2_androideabi16_arm.zip", version)
+    }
+}
+
+// Place all the Erlang runtime files in the jniLibs/<abi> subdirectory
+// and rename them into lib___.so which is the naming convention expected
+// by Android for libraries.
+// The mappings between the renamed lib___.so files and their original
+// filenames are stored in a file called libmappings.so
+def setFilesInjniLibs(String arch, String zipFileName, int version) {
+
+    def zipFile = new File(project.getRootDir().getAbsolutePath() + "/packages/" + zipFileName)
+
+    if (!zipFile.exists()) {
+        throw new GradleException("File " + zipFile + " does not exist")
+    }
+
+    // Unpack the Erlang runtime from the .zip file only on version changes
+    def doneMarkerFile = new File(project.buildDir, "./gradle/" + zipFileName + "." + version + ".done")
+    // Use a marker file to check if the unpacking has been done already
+    if (doneMarkerFile.exists()) return
+
+    // Select the right subdirectory expected for a given architecture
+    def archDirName
+    if (arch == "aarch64") archDirName = "arm64-v8a";
+    if (arch == "arm") archDirName = "armeabi-v7a";
+
+    def outputPath = project.getRootDir().getAbsolutePath() + "/app/src/main/jniLibs/" + archDirName + "/"
+    def outputDir = new File(outputPath).getAbsoluteFile()
+    if (!outputDir.exists()) outputDir.mkdirs()
+
+    def mappingsFile = new File(outputDir, "libmappings.so").getAbsoluteFile()
+    if (mappingsFile.exists()) mappingsFile.delete()
+    mappingsFile.createNewFile()
+    def mappingsFileWriter = new BufferedWriter(new FileWriter(mappingsFile))
+
+    def counter = 100
+    new ZipInputStream(new FileInputStream(zipFile)).withCloseable { zipInput ->
+        ZipEntry zipEntry
+        while ((zipEntry = zipInput.getNextEntry()) != null) {
+            if (!zipEntry.isDirectory()) {
+                def soName = "lib" + counter + ".so"
+                def targetFile = new File(outputDir, soName).getAbsoluteFile()
+
+                println "target file path is ${targetFile}"
+
+                try {
+                    transferTo(zipInput, new FileOutputStream(targetFile))
+                } catch (Exception e) {
+                    println "Error ${e}"
+                }
+
+                mappingsFileWriter.writeLine(soName + "←" + zipEntry.getName())
+                counter++
+            }
+        }
+    }
+
+    mappingsFileWriter.close()
+    // Store that the Erlang runtime has been unpacked from the .zip file
+    doneMarkerFile.parentFile.mkdirs()
+    doneMarkerFile.createNewFile()
+}
+
+// Implement a variant of transferTo as it was introduced only in Java 9
+def transferTo(InputStream input, OutputStream output) throws IOException {
+    def buffer = new byte[8192]
+    int readBytes
+    while ((readBytes = input.read(buffer)) >= 0) {
+          output.write(buffer, 0, readBytes)
+    }
 }

@@ -8,6 +8,8 @@
 
 # Files generated during the build phase
 build
+# In this project, all the .so files are generated
+*.so
 
 # Local configuration files
 /local.properties

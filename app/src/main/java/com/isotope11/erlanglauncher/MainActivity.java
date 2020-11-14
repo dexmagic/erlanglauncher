@@ -90,15 +90,6 @@ public class MainActivity extends AppCompatActivity {
 
       this.createErlangRuntimeIntoDataDir(); // Need to make this optional, check if it's there, or something...
       this.listFiles();
-      this.makeExecutable("erlang/bin/erl");
-      this.makeExecutable("erlang/erts-11.0.2/bin/erlexec");
-      this.makeExecutable("erlang/erts-11.0.2/bin/beam.smp");
-      this.makeExecutable("erlang/erts-11.0.2/bin/erl_child_setup");
-      this.makeExecutable("erlang/erts-11.0.2/bin/epmd");
-      this.makeExecutable("erlang/erts-11.0.2/bin/inet_gethost");
-      // + other executables in erts-X.Y.Z/bin potentially such as erl, erlc...
-
-      this.listFiles();
       this.copyErlangServerCode();
       this.launchErlangNode(); // This command is also launching the Epmd daemon
       try {
@@ -115,10 +106,6 @@ public class MainActivity extends AppCompatActivity {
       this.mHello.setText("All good...");
 
       return rootView;
-    }
-
-    public void makeExecutable(String path) {
-      this.doCommand("/system/bin/chmod 777 /data/data/com.isotope11.erlanglauncher/files/" + path);
     }
 
     public void listFiles() {

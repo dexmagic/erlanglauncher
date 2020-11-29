@@ -113,10 +113,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void launchErlangNode() {
-      // The HOME environment variable must be set for the Erlang server node to launch,
-      // otherwise the launch fails with the following message:
+      // The HOME environment variable must be set for the Erlang server node
+      // to launch, otherwise the launch would fail with the following message:
       //    "error:: erlexec: HOME must be set"
-      // There is a bug on this topic here: https://bugs.erlang.org/browse/ERL-476
+      // with previous versions of the Erlang runtime. This was fixed in
+      // Erlang 23 as described here: https://bugs.erlang.org/browse/ERL-476
       String[] envp = { "HOME=/data/data/com.isotope11.erlanglauncher" };
 
       // Launch the Erlang server node locally.

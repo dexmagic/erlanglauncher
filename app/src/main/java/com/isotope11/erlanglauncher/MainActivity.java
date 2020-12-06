@@ -37,11 +37,13 @@ import java.io.InputStreamReader;
 public class MainActivity extends AppCompatActivity {
 
   private static Context context;
+  private static String filesDir;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    MainActivity.context = getApplicationContext();
+    context = getApplicationContext();
+    filesDir = context.getFilesDir().getAbsolutePath();
 
     setContentView(R.layout.activity_main);
 
@@ -109,19 +111,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void listFiles() {
-      this.doCommand("/system/bin/ls -al /data/data/com.isotope11.erlanglauncher/files/erlang/erts-11.0.2/bin");
+      this.doCommand("/system/bin/ls -al " + filesDir +
+                     "/erlang/erts-11.0.2/bin");
     }
 
     public void launchErlangNode() {
+      Log.d("Fragment", "launchErlangNode");
       // The HOME environment variable must be set for the Erlang server node
       // to launch, otherwise the launch would fail with the following message:
       //    "error:: erlexec: HOME must be set"
       // with previous versions of the Erlang runtime. This was fixed in
       // Erlang 23 as described here: https://bugs.erlang.org/browse/ERL-476
-      String[] envp = { "HOME=/data/data/com.isotope11.erlanglauncher" };
+      //
+      // Pass the ERL_ROOTDIR environment variable to set dynamically the
+      // absolute path of the Erlang Runtime which is configured in a
+      // different location for multiple users on Android. The change has
+      // been discussed here: https://github.com/erlang/otp/pull/2863
+      String[] envp = { "HOME=" + filesDir,
+                        "ERL_ROOTDIR=" + filesDir + "/erlang" };
 
       // Launch the Erlang server node locally.
-      this.doCommand("files/erlang/bin/erl -detached -name server@127.0.0.1 " +
+      this.doCommand("erlang/bin/erl -detached -name server@127.0.0.1 " +
                      // "-sname server@localhost" could be used instead, or even "-sname server"
                      // Remove the -detached option to get the error messages in the log, if any
                      "-setcookie cookie " + // the "cookie" shared among all nodes
@@ -129,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
                      "-s hello_jinterface",
                      envp,
                      // The working directory used when launching the command
-                     new File("/data/data/com.isotope11.erlanglauncher/"),
+                     new File(filesDir + "/"),
                      false); // Don't wait for the command to finish)
     }
 
@@ -212,8 +222,7 @@ public class MainActivity extends AppCompatActivity {
           }
 
           String oldPath = info.nativeLibraryDir + "/" + parts[0];
-          String newPath = "/data/data/com.isotope11.erlanglauncher/files/" +
-                           parts[1];
+          String newPath = filesDir + "/" + parts[1];
 
           File directory = new File(newPath).getParentFile();
           if (!directory.isDirectory() && !directory.mkdirs()) {

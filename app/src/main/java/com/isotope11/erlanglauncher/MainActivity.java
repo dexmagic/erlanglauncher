@@ -112,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void listFiles() {
       this.doCommand("/system/bin/ls -al " + filesDir +
-                     "/erlang/erts-11.0.2/bin");
+                     "/erlang/erts-11.1.3/bin");
     }
 
     public void launchErlangNode() {

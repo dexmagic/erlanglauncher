@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
 
-    // Inflate the menu; this adds items to the action bar if it is present.
+    // Inflate the menu; this adds items to the action bar if it is present
     getMenuInflater().inflate(R.menu.main, menu);
     return true;
   }
@@ -88,38 +88,40 @@ public class MainActivity extends AppCompatActivity {
                              Bundle savedInstanceState) {
       View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
-      this.mHello = (TextView) rootView.findViewById(R.id.helloWorld);
+      mHello = (TextView) rootView.findViewById(R.id.helloWorld);
 
-      this.createErlangRuntimeIntoDataDir(); // Need to make this optional, check if it's there, or something...
-      this.listFiles();
-      this.copyErlangServerCode();
-      this.launchErlangNode(); // This command is also launching the Epmd daemon
+      // Need to make this call optional, check if it's there, or something...
+      createErlangRuntimeIntoDataDir();
+
+      listFiles();
+      copyErlangCode();
+      launchErlangNode(); // This command is also launching the Epmd daemon
       try {
-        // Wait 2 seconds for the server node to finish launching.
+        // Wait 2 seconds for the Erlang node to finish launching.
         // TODO: code should be improved to avoid this random wait time
         Thread.sleep(2000);
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
-      this.listProcesses();
+      listProcesses();
       JInterfaceTester task = new JInterfaceTester();
       task.execute();
 
-      this.mHello.setText("All good...");
+      mHello.setText("All good...");
 
       return rootView;
     }
 
     public void listFiles() {
-      this.doCommand("/system/bin/ls -al " + filesDir +
-                     "/erlang/erts-11.1.3/bin");
+      doCommand("/system/bin/ls -al " + filesDir + "/erlang/erts-11.1.3/bin");
     }
 
     public void launchErlangNode() {
       Log.d("Fragment", "launchErlangNode");
-      // The HOME environment variable must be set for the Erlang server node
-      // to launch, otherwise the launch would fail with the following message:
-      //    "error:: erlexec: HOME must be set"
+
+      // The HOME environment variable must be set for the Erlang node to
+      // launch, otherwise the launch would fail with the following message:
+      //    'error:: erlexec: HOME must be set'
       // with previous versions of the Erlang runtime. This was fixed in
       // Erlang 23 as described here: https://bugs.erlang.org/browse/ERL-476
       //
@@ -130,25 +132,38 @@ public class MainActivity extends AppCompatActivity {
       String[] envp = { "HOME=" + filesDir,
                         "ERL_ROOTDIR=" + filesDir + "/erlang" };
 
-      // Launch the Erlang server node locally.
-      this.doCommand("erlang/bin/erl -detached -name server@127.0.0.1 " +
-                     // "-sname server@localhost" could be used instead, or even "-sname server"
-                     // Remove the -detached option to get the error messages in the log, if any
-                     "-setcookie cookie " + // the "cookie" shared among all nodes
-                     "-pa files/ " + // <= the directory where the hello_jinterface.beam is found
-                     "-s hello_jinterface",
-                     envp,
-                     // The working directory used when launching the command
-                     new File(filesDir + "/"),
-                     false); // Don't wait for the command to finish)
+      // Launch the Erlang node locally
+      doCommand("erlang/bin/erl " +
+                // The '-sname node1@localhost' argument could be used
+                // instead, or '-sname node1' otherwise.
+                "-name node1@127.0.0.1 " +
+                // Remove the '-detached' argument to get the error messages
+                // from the Erlang node, if any, in the log.
+                "-detached " +
+                // The directory(ies) where to search for .beam module files.
+                // In this case, hello_jinterface.beam is put in the current
+                // working directory which is automatically added by default.
+                // "-pa dir1 dir2 " + // Uncomment if using other directories.
+                //
+                // The "cookie" shared among both nodes
+                "-setcookie cookie " +
+                // The name of the Erlang module containing the default 'start'
+                // function to run.
+                "-run hello_jinterface",
+                // Pass the environment variables
+                envp,
+                // The working directory to use when launching the command
+                new File(filesDir + "/"),
+                // Don't wait for the command to finish
+                false);
     }
 
     public void listProcesses() {
-      this.doCommand("/system/bin/ps");
+      doCommand("/system/bin/ps");
     }
 
     public void doCommand(String command) {
-        this.doCommand(command, null, null, true);
+      doCommand(command, null, null, true);
     }
 
     public void doCommand(String command, String[] envp, File dir, boolean wait) {
@@ -240,19 +255,19 @@ public class MainActivity extends AppCompatActivity {
       Log.d("Fragment", "createErlangRuntimeIntoDataDir done");
     }
 
-    protected void copyErlangServerCode() {
-      InputStream erlangServerCodeInputStream;
+    protected void copyErlangCode() {
+      InputStream erlangCodeInputStream;
       FileOutputStream out;
       try {
-        erlangServerCodeInputStream = context.getAssets().open("hello_jinterface.beam");
+        erlangCodeInputStream = context.getAssets().open("hello_jinterface.beam");
 
         out = context.openFileOutput("hello_jinterface.beam", MODE_PRIVATE);
         int read;
         byte[] buffer = new byte[8192];
-        while ((read = erlangServerCodeInputStream.read(buffer)) > 0) {
-            out.write(buffer, 0, read);
+        while ((read = erlangCodeInputStream.read(buffer)) > 0) {
+          out.write(buffer, 0, read);
         }
-        erlangServerCodeInputStream.close();
+        erlangCodeInputStream.close();
         out.flush();
         out.close();
       } catch (IOException e) {
@@ -272,12 +287,14 @@ public class MainActivity extends AppCompatActivity {
       final java.lang.reflect.Field fOs = libcore.getDeclaredField("os");
       fOs.setAccessible(true);
       final Object os = fOs.get(null);
-      final java.lang.reflect.Method method = os.getClass().getMethod("symlink", String.class, String.class);
+      final java.lang.reflect.Method method =
+          os.getClass().getMethod("symlink", String.class, String.class);
       method.invoke(os, originalFilePath, newPath);
     } catch (Exception e) {
       e.printStackTrace();
     }
   }
+
 
   public static class JInterfaceTester extends AsyncTask<Object, Void, String>{
     @Override
@@ -287,44 +304,56 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void testJInterface(){
-      // Name of the Erlang server node running locally, launched from within this same app
-      String server = "server@127.0.0.1"; // or "server@localhost"
+      // Name of the Erlang node launched previously and running locally
+      String erlangNode = "node1@127.0.0.1"; // Or "node1@localhost"
 
-      OtpNode self = null;
-      OtpMbox mbox = null;
+      OtpNode javaNode = null;
+      OtpMbox mbox     = null;
+      OtpErlangPid pid = null;
       try {
-        self = new OtpNode("mynode",  // or "mynode@127.0.0.1" or "mynode@localhost", all work
-                           "cookie"); // the "cookie" shared among all nodes
-        mbox = self.createMbox("facserver");
+        // Create a second node using the JInterface Java library
+        javaNode = new OtpNode("node2",   // Or "node2@127.0.0.1" instead
+                                          // or "node2@localhost" otherwise.
+                               "cookie"); // The "cookie" shared among nodes
 
-        if (self.ping(server, 2000)) {
-          System.out.println("remote is up");
+        // Create a "mailbox" used to exchange messages with other nodes
+        mbox = javaNode.createMbox();
+
+        // Get the process identifier (or pid) of this mailbox
+        pid = mbox.self();
+
+        // Check if the Erlang node is alive, and setup a connection with it
+        if (javaNode.ping(erlangNode, 2000)) {
+          System.out.println("The Erlang node is up");
         } else {
-          System.out.println("remote is not up");
+          System.out.println("The Erlang node is not up");
           return;
         }
       } catch (IOException e1) {
         e1.printStackTrace();
       }
 
-      OtpErlangObject[] msg = new OtpErlangObject[2];
-      msg[0] = mbox.self();
-      msg[1] = new OtpErlangAtom("ping");
+      // Create the following message: {pid, 'ping'}
+      OtpErlangObject[] msg = {pid, new OtpErlangAtom("ping")};
       OtpErlangTuple tuple = new OtpErlangTuple(msg);
-      mbox.send("pong", server, tuple);
 
+      // Pass this message to the process named 'pong' on the Erlang node
+      mbox.send("pong", erlangNode, tuple);
+
+      // Then try to receive the message sent back as a response...
       while (true)
         try {
-          OtpErlangObject robj = mbox.receive();
+          // ...expected with the format: {pid of the sender, response}
+          OtpErlangObject robj  = mbox.receive();
           OtpErlangTuple rtuple = (OtpErlangTuple) robj;
-          OtpErlangPid fromPid = (OtpErlangPid) (rtuple.elementAt(0));
-          OtpErlangObject rmsg = rtuple.elementAt(1);
-
-          System.out.println("Message: " + rmsg + " received from:  "
+          OtpErlangPid fromPid  = (OtpErlangPid) (rtuple.elementAt(0));
+          OtpErlangObject rmsg  = rtuple.elementAt(1);
+          System.out.println("Message: " + rmsg + " received from: "
                   + fromPid.toString());
 
-          OtpErlangAtom ok = new OtpErlangAtom("stop");
-          mbox.send(fromPid, ok);
+          // Finally send the 'stop' message to finish the exchange
+          OtpErlangAtom stop = new OtpErlangAtom("stop");
+          mbox.send(fromPid, stop);
           break;
 
         } catch (OtpErlangExit e) {

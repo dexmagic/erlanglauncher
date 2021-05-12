@@ -134,8 +134,9 @@ public class MainActivity extends AppCompatActivity {
 
       // Launch the Erlang node locally
       doCommand("erlang/bin/erl " +
-                // The '-sname node1@localhost' argument could be used
-                // instead, or '-sname node1' otherwise.
+                // The '-sname node1@localhost' argument could be used instead
+                // or '-sname node1' otherwise. Using the 127.0.0.1 IP address
+                // for the host part guarantees that DNS lookup won't be used.
                 "-name node1@127.0.0.1 " +
                 // Remove the '-detached' argument to get the error messages
                 // from the Erlang node, if any, in the log.
@@ -304,17 +305,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void testJInterface(){
+      // On the JInterface side too, using the 127.0.0.1 IP address for the
+      // host part guarantees that DNS lookup won't be used.
+
       // Name of the Erlang node launched previously and running locally
-      String erlangNode = "node1@127.0.0.1"; // Or "node1@localhost"
+      String erlangNodeName = "node1@127.0.0.1"; // Or "node1@localhost"
+
+      // Name of the Java node created using the JInterface Java library
+      String javaNodeName   = "node2@127.0.0.1"; // Or "node2@localhost
 
       OtpNode javaNode = null;
       OtpMbox mbox     = null;
       OtpErlangPid pid = null;
       try {
-        // Create a second node using the JInterface Java library
-        javaNode = new OtpNode("node2",   // Or "node2@127.0.0.1" instead
-                                          // or "node2@localhost" otherwise.
-                               "cookie"); // The "cookie" shared among nodes
+        // Create a second node
+        javaNode = new OtpNode(javaNodeName,
+                               // The "cookie" shared among nodes
+                               "cookie");
 
         // Create a "mailbox" used to exchange messages with other nodes
         mbox = javaNode.createMbox();
@@ -323,7 +330,7 @@ public class MainActivity extends AppCompatActivity {
         pid = mbox.self();
 
         // Check if the Erlang node is alive, and setup a connection with it
-        if (javaNode.ping(erlangNode, 2000)) {
+        if (javaNode.ping(erlangNodeName, 2000)) {
           System.out.println("The Erlang node is up");
         } else {
           System.out.println("The Erlang node is not up");
@@ -338,7 +345,7 @@ public class MainActivity extends AppCompatActivity {
       OtpErlangTuple tuple = new OtpErlangTuple(msg);
 
       // Pass this message to the process named 'pong' on the Erlang node
-      mbox.send("pong", erlangNode, tuple);
+      mbox.send("pong", erlangNodeName, tuple);
 
       // Then try to receive the message sent back as a response...
       while (true)

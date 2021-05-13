@@ -43,9 +43,9 @@ afterEvaluate {
 // Setup for the supported native architecture & ABIs
 task setup() {
     doLast {
-        def version = 1
-        setFilesInjniLibs("aarch64", "erlang_23.1.5_android21_arm64.zip", version)
-        setFilesInjniLibs("arm",     "erlang_23.1.5_androideabi16_arm.zip", version)
+        def version = 2
+        setFilesInjniLibs("aarch64", "erlang_24.0_android21_arm64.zip", version)
+        setFilesInjniLibs("arm",     "erlang_24.0_androideabi16_arm.zip", version)
     }
 }
 

@@ -104,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
         e.printStackTrace();
       }
       listProcesses();
-      JInterfaceTester task = new JInterfaceTester();
+      JinterfaceTester task = new JinterfaceTester();
       task.execute();
 
       mHello.setText("All good...");
@@ -297,21 +297,21 @@ public class MainActivity extends AppCompatActivity {
   }
 
 
-  public static class JInterfaceTester extends AsyncTask<Object, Void, String>{
+  public static class JinterfaceTester extends AsyncTask<Object, Void, String>{
     @Override
     protected String doInBackground(Object... arg0) {
-      testJInterface();
+      testJinterface();
       return "k...";
     }
 
-    public void testJInterface(){
-      // On the JInterface side too, using the 127.0.0.1 IP address for the
+    public void testJinterface(){
+      // On the Jinterface side too, using the 127.0.0.1 IP address for the
       // host part guarantees that DNS lookup won't be used.
 
       // Name of the Erlang node launched previously and running locally
       String erlangNodeName = "node1@127.0.0.1"; // Or "node1@localhost"
 
-      // Name of the Java node created using the JInterface Java library
+      // Name of the Java node created using the Jinterface Java library
       String javaNodeName   = "node2@127.0.0.1"; // Or "node2@localhost
 
       OtpNode javaNode = null;

@@ -46,6 +46,7 @@ task setup() {
         def version = 2
         setFilesInjniLibs("aarch64", "erlang_24.0_android21_arm64.zip", version)
         setFilesInjniLibs("arm",     "erlang_24.0_androideabi16_arm.zip", version)
+        setFilesInjniLibs("x86_64",  "erlang_24.0_android21_x86_64.zip", version)
     }
 }
 
@@ -70,7 +71,8 @@ def setFilesInjniLibs(String arch, String zipFileName, int version) {
     // Select the right subdirectory expected for a given architecture
     def archDirName
     if (arch == "aarch64") archDirName = "arm64-v8a";
-    if (arch == "arm") archDirName = "armeabi-v7a";
+    if (arch == "arm")     archDirName = "armeabi-v7a";
+    if (arch == "x86_64")  archDirName = "x86_64";
 
     def outputPath = project.getRootDir().getAbsolutePath() + "/app/src/main/jniLibs/" + archDirName + "/"
     def outputDir = new File(outputPath).getAbsoluteFile()

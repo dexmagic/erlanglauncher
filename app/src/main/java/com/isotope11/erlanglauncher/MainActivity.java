@@ -100,13 +100,6 @@ public class MainActivity extends AppCompatActivity {
       listFiles();
       copyErlangCode();
       launchErlangNode(); // This command is also launching the Epmd daemon
-      try {
-        // Wait 2 seconds for the Erlang node to finish launching.
-        // TODO: code should be improved to avoid this random wait time
-        Thread.sleep(2000);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
       listProcesses();
       JinterfaceTester task = new JinterfaceTester();
       task.execute();
@@ -345,11 +338,19 @@ public class MainActivity extends AppCompatActivity {
         pid = mbox.self();
 
         // Check if the Erlang node is alive, and setup a connection with it
-        if (javaNode.ping(erlangNodeName, 2000)) {
+        int timeout = 0;
+        boolean pingSuccess = false;
+        // Try every 500ms during 10s to let the Erlang node finish launching
+        do {
+            pingSuccess = javaNode.ping(erlangNodeName, 500);
+            timeout += 500;
+        } while (!pingSuccess && timeout < 10000);
+        if (pingSuccess) {
           System.out.println("The Erlang node is up");
         } else {
           System.out.println("The Erlang node is not up");
           return;
+
         }
       } catch (IOException e1) {
         e1.printStackTrace();

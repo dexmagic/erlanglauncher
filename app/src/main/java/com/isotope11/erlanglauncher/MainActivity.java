@@ -27,6 +27,8 @@ import com.ericsson.otp.erlang.OtpErlangTuple;
 import com.ericsson.otp.erlang.OtpMbox;
 import com.ericsson.otp.erlang.OtpNode;
 
+import com.ericsson.otp.erlang.OtpLocalSocketTransportFactory;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -99,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
 
       listFiles();
       copyErlangCode();
-      launchErlangNode(); // This command is also launching the Epmd daemon
+      launchErlangNode(); // The command is not launching Epmd
       listProcesses();
       JinterfaceTester task = new JinterfaceTester();
       task.execute();
@@ -141,7 +143,11 @@ public class MainActivity extends AppCompatActivity {
                 // The directory(ies) where to search for .beam module files,
                 // in this case in 'ebin'.
                 "-pa " + erlangBeamDir + " " +
-                // The "cookie" shared among both nodes
+                // Use a distribution protocol based on Unix Domain Sockets
+                "-proto_dist erl_uds " +
+                // So no need to launch the Erlang Port Mapper Daemon (Epmd)
+                "-no_epmd " +
+                // The "cookie" shared among nodes
                 "-setcookie cookie " +
                 // The name of the Erlang module containing the default 'start'
                 // function to run.
@@ -297,7 +303,7 @@ public class MainActivity extends AppCompatActivity {
       fOs.setAccessible(true);
       final Object os = fOs.get(null);
       final java.lang.reflect.Method method =
-          os.getClass().getMethod("symlink", String.class, String.class);
+        os.getClass().getMethod("symlink", String.class, String.class);
       method.invoke(os, originalFilePath, newPath);
     } catch (Exception e) {
       e.printStackTrace();
@@ -319,17 +325,41 @@ public class MainActivity extends AppCompatActivity {
       // Name of the Erlang node launched previously and running locally
       String erlangNodeName = "node1@127.0.0.1"; // Or "node1@localhost"
 
-      // Name of the Java node created using the Jinterface Java library
+      // Name of the Java nodes created using the Jinterface Java library
       String javaNodeName   = "node2@127.0.0.1"; // Or "node2@localhost
+      String otherNodeName  = "node3@127.0.0.1"; // Or "node3@localhost"
 
-      OtpNode javaNode = null;
-      OtpMbox mbox     = null;
-      OtpErlangPid pid = null;
+      OtpNode javaNode  = null;
+      OtpNode otherNode = null;
+      OtpMbox mbox      = null;
+      OtpErlangPid pid  = null;
+
       try {
+        // Use stream Unix Domain Sockets (with the Android-specific
+        // LocalSocket-based factory) as an alternative distribution protocol.
+        OtpLocalSocketTransportFactory udsTransportFactory =
+          new OtpLocalSocketTransportFactory(filesDir + "/");
+
         // Create a second node
         javaNode = new OtpNode(javaNodeName,
                                // The "cookie" shared among nodes
-                               "cookie");
+                               "cookie",
+                               // Use the alternative distribution protocol
+                               udsTransportFactory);
+
+        // Create a third node
+        otherNode = new OtpNode(otherNodeName,
+                                // The "cookie" shared among nodes
+                                "cookie",
+                               // Use the alternative distribution protocol
+                               udsTransportFactory);
+
+        // Check the connection between the 2 nodes on the Jinterface side
+        if (javaNode.ping(otherNodeName, 2000)) {
+          System.out.println("The Jinterface nodes are connected");
+        } else {
+          System.out.println("The Jinterface nodes couldn't connect");
+        }
 
         // Create a "mailbox" used to exchange messages with other nodes
         mbox = javaNode.createMbox();
@@ -349,8 +379,9 @@ public class MainActivity extends AppCompatActivity {
           System.out.println("The Erlang node is up");
         } else {
           System.out.println("The Erlang node is not up");
+          javaNode.close();
+          otherNode.close();
           return;
-
         }
       } catch (IOException e1) {
         e1.printStackTrace();
@@ -364,7 +395,7 @@ public class MainActivity extends AppCompatActivity {
       mbox.send("pong", erlangNodeName, tuple);
 
       // Then try to receive the message sent back as a response...
-      while (true)
+      while (true) {
         try {
           // ...expected with the format: {pid of the sender, response}
           OtpErlangObject robj  = mbox.receive();
@@ -385,6 +416,10 @@ public class MainActivity extends AppCompatActivity {
         } catch (OtpErlangDecodeException e) {
           e.printStackTrace();
         }
+      }
+
+      javaNode.close();
+      otherNode.close();
     }
 
   }

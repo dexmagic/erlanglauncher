@@ -2,6 +2,7 @@ package com.isotope11.erlanglauncher;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
+import android.content.res.AssetManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -38,6 +39,9 @@ public class MainActivity extends AppCompatActivity {
 
   private static Context context;
   private static String filesDir;
+
+  // Subdirectory within the app assets where to drop the .beam file(s)
+  private static final String erlangBeamDir = "ebin";
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -141,11 +145,9 @@ public class MainActivity extends AppCompatActivity {
                 // Remove the '-detached' argument to get the error messages
                 // from the Erlang node, if any, in the log.
                 "-detached " +
-                // The directory(ies) where to search for .beam module files.
-                // In this case, hello_jinterface.beam is put in the current
-                // working directory which is automatically added by default.
-                // "-pa dir1 dir2 " + // Uncomment if using other directories.
-                //
+                // The directory(ies) where to search for .beam module files,
+                // in this case in 'ebin'.
+                "-pa " + erlangBeamDir + " " +
                 // The "cookie" shared among both nodes
                 "-setcookie cookie " +
                 // The name of the Erlang module containing the default 'start'
@@ -242,7 +244,8 @@ public class MainActivity extends AppCompatActivity {
 
           File directory = new File(newPath).getParentFile();
           if (!directory.isDirectory() && !directory.mkdirs()) {
-            throw new RuntimeException("Unable to create directory: " + directory.getAbsolutePath());
+            throw new RuntimeException("Unable to create directory: " +
+                                       directory.getAbsolutePath());
           }
 
           Log.d("Fragment", "About to setup link: " + oldPath + " ← " + newPath);
@@ -257,20 +260,32 @@ public class MainActivity extends AppCompatActivity {
     }
 
     protected void copyErlangCode() {
+      AssetManager assets = context.getAssets();
       InputStream erlangCodeInputStream;
       FileOutputStream out;
-      try {
-        erlangCodeInputStream = context.getAssets().open("hello_jinterface.beam");
 
-        out = context.openFileOutput("hello_jinterface.beam", MODE_PRIVATE);
-        int read;
-        byte[] buffer = new byte[8192];
-        while ((read = erlangCodeInputStream.read(buffer)) > 0) {
-          out.write(buffer, 0, read);
+      // Subdirectory within the app data where to copy the .beam file(s)
+      File directory = new File(filesDir + "/" + erlangBeamDir);
+      if (!directory.isDirectory() && !directory.mkdirs()) {
+          throw new RuntimeException("Unable to create directory: " +
+                                     directory.getAbsolutePath());
+      }
+
+      try {
+        // Copy all the files from this asset subdirectory
+        String[] fileList = assets.list(erlangBeamDir);
+        for (String file : fileList) {
+          erlangCodeInputStream = assets.open(erlangBeamDir + "/" + file);
+          out = new FileOutputStream(directory + "/" + file);
+          int read;
+          byte[] buffer = new byte[8192];
+          while ((read = erlangCodeInputStream.read(buffer)) > 0) {
+            out.write(buffer, 0, read);
+          }
+          erlangCodeInputStream.close();
+          out.flush();
+          out.close();
         }
-        erlangCodeInputStream.close();
-        out.flush();
-        out.close();
       } catch (IOException e) {
         throw new RuntimeException(e);
       }

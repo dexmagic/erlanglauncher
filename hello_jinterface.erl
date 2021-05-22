@@ -4,7 +4,9 @@
 pong() ->
     receive
         stop ->
-            io:format("Pong finished...~n", []);
+            io:format("Pong finished...~n", []),
+            %% Finally stop the node smoothly
+            init:stop();
         {Ping_PID, ping} ->
             io:format("Ping~n", []),
             Ping_PID ! {self(), pong},

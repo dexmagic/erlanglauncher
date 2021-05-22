@@ -97,6 +97,13 @@ public class OtpLocalSocketTransport implements OtpTransport {
      * @see LocalSocket#close()
      */
     @Override public void close() throws IOException {
+        // Close the socket's InputStream and OutputStream explicitly, to get
+        // the same behavior as when calling close() on a java.net.Socket which
+        // closes the 2 streams implicitly. Any thread currently blocked in an
+        // I/O read operation upon the socket will return -1 (end of stream).
+        localSocket.shutdownInput();
+        localSocket.shutdownOutput();
+        // Then close the socket.
         localSocket.close();
     }
 

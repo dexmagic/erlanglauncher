@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import android.net.LocalSocket;
 import android.net.LocalSocketAddress;
+import android.net.LocalSocketAddress.Namespace;
 
 /**
  * Client-side transport based on stream-oriented Unix Domain Sockets (of the
@@ -39,17 +40,22 @@ public class OtpLocalSocketTransport implements OtpTransport {
      * Domain Socket listening at the specified name.
      *
      * @param name
-     *            The name of the server Unix Domain Socket to connect to, a
-     *            file pathname in the local filesystem. The socket pathname
+     *            The name of the server Unix Domain Socket to connect to, it
+     *            can be either a name in the Linux-specific abstract namespace
+     *            or a file pathname in the local filesystem. A socket pathname
      *            is limited in length to 107 bytes on Android, is encoded
      *            according to the current file system encoding mode and can
      *            be either relative or absolute.
+     *
+     * @param namespace
+     *            The namespace, either ABSTRACT or FILESYSTEM, of the Unix
+     *            Domain Socket to connect to.
      *
      * When interacting with actual Erlang nodes, keep in mind that Erlang
      * node names have some restrictions. As of this writing, they are
      * limited to the following character set: 0-9 A-Z a-z _ and -
      * (cf. net_kernel:valid_name_head/1) so they cannot contain . / or \.
-     * As a consequence, the socket file pathname is relative to the current
+     * As a consequence, a socket file pathname is relative to the current
      * working directory on the Erlang side. This limitation does not apply
      * to the node names defined within JInterface.
      *
@@ -57,14 +63,12 @@ public class OtpLocalSocketTransport implements OtpTransport {
      *
      * @throws IOException
      */
-    public OtpLocalSocketTransport(final String name)
+    public OtpLocalSocketTransport(final String    name,
+                                   final Namespace namespace)
             throws IOException {
         // Create a new stream-oriented socket
         localSocket = new LocalSocket();
-        LocalSocketAddress endPoint =
-            new LocalSocketAddress(name,
-                                   LocalSocketAddress.Namespace.FILESYSTEM);
-        localSocket.connect(endPoint);
+        localSocket.connect(new LocalSocketAddress(name, namespace));
     }
 
     /**

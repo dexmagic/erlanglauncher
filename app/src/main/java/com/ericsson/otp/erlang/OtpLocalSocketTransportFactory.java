@@ -20,6 +20,8 @@ package com.ericsson.otp.erlang;
 
 import java.io.File;
 import java.io.IOException;
+import android.net.LocalSocketAddress;
+import android.net.LocalSocketAddress.Namespace;
 
 /**
  * Transport factory based on stream-oriented Unix Domain Sockets (of the
@@ -27,6 +29,13 @@ import java.io.IOException;
  * using the Android-specific LocalSocket implementation.
  */
 public class OtpLocalSocketTransportFactory extends OtpGenericTransportFactory {
+
+    // The namespace of the sockets created by the factory, it can be:
+    // - FILESYSTEM: the sockets are created on the local filesystem using
+    //               normal filesystem paths
+    // - ABSTRACT:   the sockets are not created on the filesystem but
+    //               in a Linux-specific abstract namespace
+    final Namespace namespace;
 
     // Directory in the filesystem where the Unix Domain Socket files will be
     // created. This directory path can be either relative (such as "../") or
@@ -39,24 +48,37 @@ public class OtpLocalSocketTransportFactory extends OtpGenericTransportFactory {
     final String socketDir;
 
     /**
-     * Constructor defining the base directory on the local filesystem where
-     * the factory will create the socket files and/or will connect to them.
+     * Constructor for a factory creating sockets on the local filesystem
+     * and defining the base directory where the factory will create the
+     * socket files and/or will connect to them.
      *
      * @param socketDir
-     *            The directory where the socket files will be created,
-     *            it must end with the '/' character.
+     *            The directory where the socket files will be created, it
+     *            must end with a file separator, usually the '/' character.
      *
      * @throws IOException
      *            When the specified directory is not valid.
      */
     public OtpLocalSocketTransportFactory(final String socketDir)
             throws IOException {
+        namespace = Namespace.FILESYSTEM;
         if (socketDir == null ||
             socketDir.charAt(socketDir.length() - 1) != File.separatorChar) {
             throw new IOException("Invalid directory where to create " +
-                                  "socket files, it must end with '/'.");
+                                  "socket files, it must end with " +
+                                  File.separatorChar + ".");
         }
         this.socketDir = socketDir;
+    }
+
+    /**
+     * Constructor for a factory creating sockets in the abstract namespace.
+     *
+     */
+    public OtpLocalSocketTransportFactory() {
+        namespace = Namespace.ABSTRACT;
+        // Use the abstract socket names as passed, so no prefix is added
+        socketDir = "";
     }
 
     /**
@@ -81,7 +103,7 @@ public class OtpLocalSocketTransportFactory extends OtpGenericTransportFactory {
         // as the name of the Unix Domain Socket to connect to, called the
         // alivename in Jinterface.
         String socketName = peer.alive();
-        return new OtpLocalSocketTransport(socketDir + socketName);
+        return new OtpLocalSocketTransport(socketDir + socketName, namespace);
     }
 
     /**
@@ -106,7 +128,8 @@ public class OtpLocalSocketTransportFactory extends OtpGenericTransportFactory {
         // as the name of the listening Unix Domain Socket to create, called the
         // alivename in Jinterface.
         String socketName = node.alive();;
-        return new OtpLocalServerSocketTransport(socketDir + socketName);
+        return new OtpLocalServerSocketTransport(socketDir + socketName,
+                                                 namespace);
     }
 
 }

@@ -42,17 +42,22 @@ public class OtpLocalServerSocketTransport implements OtpServerTransport {
      * Create a new server Unix Domain Socket listening on the specified name.
      *
      * @param name
-     *            The name of the server Unix Domain Socket to create, a
-     *            file pathname in the local filesystem. The socket pathname
+     *            The name of the server Unix Domain Socket to create, it can
+     *            be either a name in the Linux-specific abstract namespace or
+     *            a file pathname in the local filesystem. A socket pathname
      *            is limited in length to 107 bytes on Android, is encoded
      *            according to the current file system encoding mode and can
      *            be either relative or absolute.
+     *
+     * @param namespace
+     *            The namespace, either ABSTRACT or FILESYSTEM, of the Unix
+     *            Domain Socket to create.
      *
      * When interacting with actual Erlang nodes, keep in mind that Erlang
      * node names have some restrictions. As of this writing, they are
      * limited to the following character set: 0-9 A-Z a-z _ and -
      * (cf. net_kernel:valid_name_head/1) so they cannot contain . / or \.
-     * As a consequence, the socket file pathname is relative to the current
+     * As a consequence, a socket file pathname is relative to the current
      * working directory on the Erlang side. This limitation does not apply
      * to the node names defined within JInterface.
      *
@@ -61,22 +66,30 @@ public class OtpLocalServerSocketTransport implements OtpServerTransport {
      *
      * @throws IOException
      */
-    public OtpLocalServerSocketTransport(String name)
+    public OtpLocalServerSocketTransport(String    name,
+                                         Namespace namespace)
         throws IOException {
+
+        LocalSocketAddress socketAddress =
+            new LocalSocketAddress(name, namespace);
+
         // With the Android API it is not possible to create directly a
         // LocalServerSocket listening on a file in the local filesystem.
         // However it can be created indirectly through a file descriptor
         // used as a handle to a LocalSocket already created and bound.
+        if (namespace == Namespace.FILESYSTEM) {
 
-        // First create a LocalSocket and bind it to name
-        LocalSocketAddress socketAddress =
-            new LocalSocketAddress(name, Namespace.FILESYSTEM);
-        LocalSocket socket = new LocalSocket();
-        socket.bind(socketAddress);
+            // First create a LocalSocket and bind it to name
+            LocalSocket socket = new LocalSocket();
+            socket.bind(socketAddress);
 
-        // Create the server Unix Domain Socket through a file descriptor
-        // representing the above socket.
-        listeningSocket = new LocalServerSocket(socket.getFileDescriptor());
+            // Create the server Unix Domain Socket through a file descriptor
+            // representing the above socket.
+            listeningSocket = new LocalServerSocket(socket.getFileDescriptor());
+
+        } else { // namespace == Namespace.ABSTRACT
+            listeningSocket = new LocalServerSocket(name);
+        }
 
         // Save the underlying socket address
         this.socketAddress = socketAddress;

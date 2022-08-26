@@ -203,8 +203,12 @@ public class MainActivity extends AppCompatActivity {
         reader.close();
 
         // Send stdout and stderr to the log
-        Log.d("Fragment", output.toString());
-        Log.d("Fragment error:", error.toString());
+        if (output.length() != 0) {
+          Log.d("Fragment", output.toString());
+        }
+        if (error.length() != 0) {
+          Log.d("Fragment error", error.toString());
+        }
 
       } catch (IOException e) {
         throw new RuntimeException(e);
